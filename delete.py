@@ -151,3 +151,18 @@ if __name__ == "__main__":
     
     # Test the audio file
     test_audio_file(file_path)
+if __name__ == "__main__":
+    # Get file path from command line or use default
+    import sys
+    if len(sys.argv) > 1:
+        file_path = sys.argv[1]
+    else:
+        file_path = input("Enter path to WAV file: ")
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        print(f"{Fore.RED}Error: File not found: {file_path}{Style.RESET_ALL}")
+        exit(1)
+    
+    # Test the audio file
+    test_audio_file(file_path)

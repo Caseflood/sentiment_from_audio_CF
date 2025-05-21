@@ -175,6 +175,7 @@ def process_audio_with_sliding_window(audio_data, format='wav'):
 def analyze_audio():
     """API endpoint for emotion analysis"""
     api_start_time = time.time()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     try:
         # Decode data timing
@@ -191,12 +192,26 @@ def analyze_audio():
             audio_data = base64.b64decode(request.form['audio_data'])
         decode_time = time.time() - decode_start
         
+        # Create directory for saved audio if it doesn't exist
+        os.makedirs('saved_audio', exist_ok=True)
+        
         # Process audio timing
         process_start = time.time()
         results = process_audio_with_sliding_window(audio_data, format=audio_format)
         process_time = time.time() - process_start
         
         if results:
+            # Get the top emotion from the first window (or use "unknown" if none)
+            top_emotion = "unknown"
+            if results[0]['emotions']:
+                top_emotion = results[0]['emotions'][0]['emotion']
+            
+            # Save the audio file with timestamp and emotion
+            filename = f"saved_audio/{timestamp}_{top_emotion}.{audio_format}"
+            with open(filename, 'wb') as f:
+                f.write(audio_data)
+            print(f"Saved audio to {filename}")
+            
             total_time = time.time() - api_start_time
             
             # Add timing information to response
@@ -205,6 +220,7 @@ def analyze_audio():
                 'timestamp': datetime.now().isoformat(),
                 'window_size': WINDOW_SIZE,
                 'stride': STRIDE,
+                'saved_file': filename,
                 'results': results,
                 'timing': {
                     'decode_time_ms': decode_time * 1000,
@@ -220,10 +236,28 @@ def analyze_audio():
             
             return jsonify(response)
         else:
-            return jsonify({'error': 'Failed to process audio'}), 500
+            # Save the audio file with "unknown" emotion
+            filename = f"saved_audio/{timestamp}_unknown.{audio_format}"
+            with open(filename, 'wb') as f:
+                f.write(audio_data)
+            print(f"Saved audio with unknown emotion to {filename}")
+            
+            return jsonify({'error': 'Failed to process audio', 'saved_file': filename}), 500
             
     except Exception as e:
         print(f"Error in analyze endpoint: {str(e)}")
+        
+        # Try to save the audio even if processing failed
+        try:
+            if 'audio_data' in locals():
+                filename = f"saved_audio/{timestamp}_error.{audio_format}"
+                with open(filename, 'wb') as f:
+                    f.write(audio_data)
+                print(f"Error occurred but saved audio to {filename}")
+                return jsonify({'error': str(e), 'saved_file': filename}), 500
+        except:
+            pass
+            
         return jsonify({'error': str(e)}), 500
 
 @app.route('/health', methods=['GET'])
