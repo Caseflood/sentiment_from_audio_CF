@@ -1,0 +1,9 @@
+opensmile==2.5.1
+pandas
+numpy
+tqdm
+tensorflow
+scikit-learn
+sounddevice
+soundfile
+wandb 
